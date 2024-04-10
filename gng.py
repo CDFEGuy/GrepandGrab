@@ -2,10 +2,10 @@
                 *******************************************************************
                 *                        Grep and Grab                            *
                 *                                                                 *
-                * Description: This Python3 script takes your search term, in     *
-                * REGEX format, and GREPS it against your chosen target directory.*
-                * If files are found, it will then copy them to an output         *
-                * directory of your choosing.                                     *
+                * Description: This Python3 script takes your search term, in and *
+                * GREPS it against your chosen target directory. If files are     *
+                * found, it will then copy them to an output directory of your    *
+                * choosing.                                                       *
                 * Reqs: For use on Unix-based systems.                            *
                 * Author: Taylor Nitschke, CDFE, CCI                              *
                 *******************************************************************
@@ -14,14 +14,14 @@
 
 import argcomplete,argparse
 import re
-import os
+import os,time
 import shutil
 import subprocess
 from tqdm import tqdm
 #PYTHON_ARGCOMPLETE_OK
 
-__version__ = "0.15.1"
-__date__ = "2 April 2024"
+__version__ = "0.16.1"
+__date__ = "10 April 2024"
 
 ##############################################
 # Introduce parser arguments                 #
@@ -30,7 +30,7 @@ __date__ = "2 April 2024"
 
 parser = argparse.ArgumentParser(description='This Python3 script takes your search term and GREPS it against your chosen target directory. If files are found, it will then copy them to an output directory of your choosing.')
 
-parser.add_argument('-s','--search',type=str,required=True,help='The search term to grep (REQUIRED)')
+parser.add_argument('-s','--search',nargs='+',required=True,help='The search term to grep (REQUIRED)')
 parser.add_argument('-t','--target',type=str,required=True,help='The target directory to grep against (REQUIRED)')
 parser.add_argument('-o','--output',type=str,required=True,help='The output directory where files containing the search term are copied to (REQUIRED)')
 parser.add_argument('-v','--version',action='version',version=f'%(prog)s v{__version__} {__date__}')
@@ -49,7 +49,7 @@ print('''\n
  \______  /__|    \___  >   __/  (____  /___|  /\____ |   \______  /__|  (____  /___  /
         \/            \/|__|          \/     \/      \/          \/           \/    \/ 
 
-Version 0.15.1
+Version 0.16.1
 ''')
 
 # Objectives:
@@ -61,6 +61,7 @@ Version 0.15.1
 # Check target to ensure path exists. Loop to allow correction. Return target.
 def target_check(target):
     print('\nChecking Target Directory...')
+    time.sleep(0.5)
     while not os.path.exists(target):
         print('\nTarget directory does not exist. Please check it and try again')
         target = input('Target Directory: ')
@@ -69,22 +70,24 @@ def target_check(target):
 
 # Use subprocess.run to createterminal command GREP for string at target directory. Return files.
 def search_tool(string, directory):
-    _escapedString = re.escape(string)
-    _regexPattern = '.*'.join(_escapedString.split())
-    print(f'\nRunning GREP recursively for "{string}" at {directory}...')
-    results = subprocess.run(['grep','-r','-l',_regexPattern,directory], capture_output = True)
+    search_string = ' '.join(string)
+    print(f'\nGrepping "{search_string}" in {directory}...')
+    search_pattern = '.*'.join(string)
+    results = subprocess.run(['grep','-R','-l','-w',search_pattern,directory], capture_output = True)
     files = results.stdout.decode().split('\n')
     return files
 
 # Get a count of files found containing string. Used later for status bar. Return total.
 def file_counter(files, string):
-    print('\nCounting Files...')
+    time.sleep(0.5)
+    search_string = ' '.join(string)
     total = sum(1 for i in files if os.path.isfile(i))
     if total == 0:
-        print(f'\nNo files found containing "{string}"!\n')
+        print(f'\nNo files found containing "{search_string}"!\n')
         exit()
     else:
-        print(f'\n{total} files found containing "{string}"!\n')
+        print('\nCounting Files...')
+        print(f'\n{total} files found containing "{search_string}"!\n')
     return total
 
 # Check output directory. Create if it doesn't exist. Return output.
@@ -111,7 +114,8 @@ def main():
     total = file_counter(files, searchFor)
     output_check(output)
     run_copier(total, files, output)
-    print(f'\nComplete! {total} files containing {searchFor} were topied to {output}!\n')
+    search_string = ' '.join(searchFor)
+    print(f'\nComplete! {total} files containing {search_string} were copied to {output}!\n')
 
 # Execute!
 if __name__ == "__main__":
